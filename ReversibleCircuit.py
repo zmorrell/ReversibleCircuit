@@ -21,13 +21,14 @@ class Circuit:
             
         return string
         
-    def hamiltonian(self):
-        ham = None
+    def fullStoch(self):
+        stoch = None
         for gate in self.gates:
-            if ham == None:
-                ham = gate.hamiltonian(self.n)
+            if stoch is None:
+                stoch = gate.fullStoch(self.n)
             else:
-                ham = np.dot(gate.hamiltonian(self.n) * ham)
+                stoch = np.dot(gate.fullStoch(self.n), stoch)
+        return stoch
     
     
     def printWires(self):
@@ -52,6 +53,8 @@ class Wire:
         return string
 
 class Gate:
+    #assumes if bits = (0,1,2), order is kron(b2,b1,b0).  This follows from c01 gate having control
+    #on 0 and target on 1 by convention
     gatecount = 0
 
     def __init__(self,matrix,bits):
@@ -64,8 +67,64 @@ class Gate:
     def __str__(self):
         return f"-g{self.id}-"
     
-    def hamiltonian(self,n):
-        #first construct hamiltonian operating on first len(bits) qubits, then swap
-        ham = mat
-        for i in range(1 - len(self.bits)):
-            ham = np.kron([[1,0],[0,1]],mat)
+    
+    
+    def fullStoch(self,n):
+        #first construct hamiltonian operating on first len(bits) qubits, then swap bits to fit order
+        stoch = self.matrix
+        for i in range(n - len(self.bits)):
+            stoch = np.kron([[1,0],[0,1]],stoch)
+            
+        print("preswap: \n", stoch)
+        swaps = Gate._swapcircuit(self,n)
+        if len(swaps):
+            stoch = np.dot(stoch, np.transpose(swaps))
+            stoch = np.dot(swaps, stoch)
+            
+        print("postswap:\n",stoch)
+        return stoch
+    
+    def _swapcircuit(self,n):
+        swaplist = Gate._bubbleSortOperations(self.bits) 
+        sortedbits = sorted(self.bits)
+        for i in range(len(sortedbits)-1,-1,-1):
+            if not (i == sortedbits[i]):
+                swaplist.append((i,sortedbits[i]))
+        print(swaplist)
+        return Gate._swapStoch(self,n,swaplist)
+    
+    
+    def _swapStoch(self,n,swaplist):
+        swapMatrix =  []
+        if not (len(swaplist) == 0):
+            swapMatrix = np.eye(2**n)
+            for swapbits in swaplist:
+                swapMatrix = np.dot(Gate._generateSwapMatrix(n,swapbits),swapMatrix)
+        print(swapMatrix)
+        return swapMatrix
+    
+    def _generateSwapMatrix(n,swapbits):
+        N = 2**n
+        swapMat = np.zeros((N,N))
+        for i in range(N):
+            mask1 = i >> swapbits[0] & 1
+            mask2 = i >> swapbits[1] & 1
+            xor = mask1 ^ mask2
+            xor = xor << swapbits[0] | xor << swapbits[1]
+            j = i ^ xor
+            swapMat[i,j] = 1
+        return swapMat
+    
+    def _bubbleSortOperations(bits):
+        issorted = False
+        swaplist = []
+        while not issorted:
+            issorted = True
+            for i in range(len(bits) - 1):
+                if bits[i] > bits[i+1]:
+                    temp = bits[i]
+                    bits[i] = bits[i+1]
+                    bits[i+1] = temp
+                    issorted = False
+                    swaplist.append((i,i+1))
+        return swaplist
