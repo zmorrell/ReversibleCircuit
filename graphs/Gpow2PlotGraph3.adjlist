@@ -1,0 +1,11 @@
+#/home/zmorrell/anaconda3/lib/python3.7/site-packages/ipykernel_launcher.py -f /home/zmorrell/.local/share/jupyter/runtime/kernel-5619c3ea-9362-40aa-b868-adc6cf104d14.json
+# GMT Fri Apr 23 22:32:48 2021
+# 
+0 1 4 6
+1 2 3
+2 4 7
+3 4 5
+4
+5 7 6
+6 7
+7
